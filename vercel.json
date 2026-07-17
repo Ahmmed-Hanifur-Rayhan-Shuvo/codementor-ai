@@ -17,6 +17,7 @@
       }
     },
     {
+<<<<<<< HEAD
       "source": "/(.*)",
       "destination": {
         "service": "frontend"
@@ -24,3 +25,31 @@
     }
   ]
 }
+=======
+      "src": "frontend/**",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "frontend/dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/docs",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/dist/$1"
+    }
+  ]
+}
+>>>>>>> 820090119c75ef1098702fffb0db06bba2b55db3
