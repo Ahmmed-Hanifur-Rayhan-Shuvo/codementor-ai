@@ -5,13 +5,23 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['lucide-react', 'framer-motion', 'react-hot-toast']
         }
+      }
+    }
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
       }
     }
   }

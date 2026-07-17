@@ -1,28 +1,18 @@
 {
-  "services": {
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite",
-      "installCommand": "npm install",
-      "buildCommand": "npx vite build"
-    },
-    "backend": {
-      "root": "backend",
-      "entrypoint": "app/main.py"
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  },
-  "rewrites": [
+  ],
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "backend"
-      }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }

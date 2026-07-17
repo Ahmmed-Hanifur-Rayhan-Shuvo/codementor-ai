@@ -11,10 +11,5 @@
       "src": "/(.*)",
       "dest": "app/main.py"
     }
-  ],
-  "env": {
-    "OPENAI_API_KEY": "@openai_api_key",
-    "OPENAI_BASE_URL": "https://openrouter.ai/api/v1",
-    "DEFAULT_MODEL": "deepseek/deepseek-v4-flash:free"
-  }
+  ]
 }
