@@ -3,19 +3,17 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist',
+    sourcemap: true
+  },
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true
       }
     }
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true
   }
 })
