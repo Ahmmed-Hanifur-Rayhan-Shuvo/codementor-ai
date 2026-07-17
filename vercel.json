@@ -6,7 +6,7 @@
       "use": "@vercel/python"
     },
     {
-      "src": "frontend/package.json",
+      "src": "frontend/**",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "frontend/dist"
@@ -19,13 +19,16 @@
       "dest": "backend/app/main.py"
     },
     {
+      "src": "/docs",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "backend/app/main.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
     }
-  ],
-  "env": {
-    "OPENAI_API_KEY": "@openai_api_key",
-    "OPENAI_BASE_URL": "https://openrouter.ai/api/v1",
-    "DEFAULT_MODEL": "deepseek/deepseek-v4-flash:free"
-  }
+  ]
 }
