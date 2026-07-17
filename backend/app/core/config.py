@@ -1,11 +1,10 @@
 import os
-from typing import List, Dict, Optional
-from pydantic_settings import BaseSettings
+from typing import List, Dict
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class Settings(BaseSettings):
+class Settings:
     """Application settings"""
     
     # API Settings
@@ -28,7 +27,7 @@ class Settings(BaseSettings):
         "https://www.codementor.ai"
     ]
     
-    # AI Configuration - Add these fields
+    # AI Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
     DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "deepseek/deepseek-v4-flash:free")
@@ -46,18 +45,6 @@ class Settings(BaseSettings):
             "models": ["deepseek-v4-flash:free", "deepseek-v4"],
             "api_key": os.getenv("OPENAI_API_KEY", ""),
             "base_url": os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
-        },
-        "claude": {
-            "name": "Claude",
-            "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
-            "api_key": os.getenv("ANTHROPIC_API_KEY", ""),
-            "base_url": "https://api.anthropic.com/v1"
-        },
-        "gemini": {
-            "name": "Gemini",
-            "models": ["gemini-pro", "gemini-2.0-flash", "gemini-2.0-pro"],
-            "api_key": os.getenv("GOOGLE_API_KEY", ""),
-            "base_url": "https://generativelanguage.googleapis.com/v1beta"
         }
     }
     
@@ -69,19 +56,11 @@ class Settings(BaseSettings):
     
     # Feature Flags
     ENABLE_WEBSOCKET: bool = True
-    ENABLE_VOICE: bool = True
     ENABLE_HISTORY: bool = True
-    ENABLE_TEAMS: bool = True
     ENABLE_ANALYTICS: bool = True
-    ENABLE_EXPORT: bool = True
     
     # Rate Limiting
     MAX_REQUESTS_PER_MINUTE: int = 60
     MAX_CODE_LENGTH: int = 100000
-    
-    class Config:
-        env_file = ".env"
-        extra = "ignore"  # This allows extra fields from .env
-        case_sensitive = True
 
 settings = Settings()
