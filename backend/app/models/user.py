@@ -36,5 +36,12 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     role: UserRole
     created_at: datetime
+    last_login: Optional[datetime]
     is_active: bool
     preferences: dict
+
+class UserPreferences(BaseModel):
+    theme: str = "dark"
+    auto_fix: bool = True
+    default_language: str = "python"
+    notifications: bool = True

@@ -1,579 +1,288 @@
-"""
-Static Code Analyzer Service
-Supports 20+ programming languages
-"""
+# backend/app/services/analyzer_service.py
+
 import re
-from typing import List, Dict, Optional
+from typing import List, Tuple
 from ..models.code import CodeIssue, Severity, IssueType
 
 class AnalyzerService:
-    """Static code analyzer with pattern matching"""
+    """Complete Code Analyzer with Auto-Fix"""
     
-    # Supported languages
-    LANGUAGES = {
-        'python': {'extensions': ['py'], 'name': 'Python'},
-        'javascript': {'extensions': ['js', 'jsx'], 'name': 'JavaScript'},
-        'typescript': {'extensions': ['ts', 'tsx'], 'name': 'TypeScript'},
-        'java': {'extensions': ['java'], 'name': 'Java'},
-        'csharp': {'extensions': ['cs'], 'name': 'C#'},
-        'cpp': {'extensions': ['cpp', 'cxx', 'h', 'hpp'], 'name': 'C++'},
-        'ruby': {'extensions': ['rb'], 'name': 'Ruby'},
-        'go': {'extensions': ['go'], 'name': 'Go'},
-        'rust': {'extensions': ['rs'], 'name': 'Rust'},
-        'php': {'extensions': ['php'], 'name': 'PHP'},
-        'swift': {'extensions': ['swift'], 'name': 'Swift'},
-        'kotlin': {'extensions': ['kt', 'kts'], 'name': 'Kotlin'},
-        'dart': {'extensions': ['dart'], 'name': 'Dart'},
-        'r': {'extensions': ['r'], 'name': 'R'},
-        'scala': {'extensions': ['scala'], 'name': 'Scala'},
-        'perl': {'extensions': ['pl', 'pm'], 'name': 'Perl'},
-        'haskell': {'extensions': ['hs'], 'name': 'Haskell'},
-        'clojure': {'extensions': ['clj'], 'name': 'Clojure'},
-        'elixir': {'extensions': ['ex', 'exs'], 'name': 'Elixir'},
-        'erlang': {'extensions': ['erl'], 'name': 'Erlang'},
-        'shell': {'extensions': ['sh', 'bash'], 'name': 'Shell Script'}
-    }
-    
-    def analyze(self, code: str, language: str) -> List[CodeIssue]:
-        """Analyze code for issues"""
-        issues = []
+    def analyze(self, code: str, language: str) -> Tuple[List[CodeIssue], int]:
+        if not code or not code.strip():
+            return [], 100
         
+        issues = []
+        lines = code.split('\n')
+        
+        # ============================================================
+        # 1. SYNTAX ERRORS
+        # ============================================================
+        
+        # Missing colon (Python)
         if language == "python":
-            issues = self._analyze_python(code)
-        elif language in ["javascript", "typescript"]:
-            issues = self._analyze_javascript(code)
-        elif language == "java":
-            issues = self._analyze_java(code)
-        elif language == "cpp":
-            issues = self._analyze_cpp(code)
-        elif language == "csharp":
-            issues = self._analyze_csharp(code)
-        elif language == "ruby":
-            issues = self._analyze_ruby(code)
-        elif language == "go":
-            issues = self._analyze_go(code)
-        elif language == "rust":
-            issues = self._analyze_rust(code)
-        elif language == "php":
-            issues = self._analyze_php(code)
-        else:
-            issues = self._analyze_generic(code)
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#'):
+                    continue
+                if stripped.startswith(('def ', 'class ', 'if ', 'elif ', 'else', 'for ', 'while ', 'try', 'except', 'finally')):
+                    if ':' not in stripped:
+                        issues.append(CodeIssue(
+                            message=f"❌ Missing colon ':' in line {i+1}",
+                            severity=Severity.CRITICAL,
+                            suggestion="Add ':' at the end of the statement",
+                            type=IssueType.BUG,
+                            line=i+1,
+                            fixed_code=line + ':'  # ফিক্স কোড
+                        ))
+                        break
         
-        return issues
-    
-    def _analyze_python(self, code: str) -> List[CodeIssue]:
-        """Analyze Python code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'execute\s*\(\s*f[\'"]',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection vulnerability detected',
-                'suggestion': 'Use parameterized queries with ? placeholders'
-            },
-            {
-                'pattern': r'(password|secret|key|token)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables or secrets manager'
-            },
-            {
-                'pattern': r'except\s*:\s*pass',
-                'severity': Severity.HIGH,
-                'type': IssueType.BUG,
-                'message': 'Empty exception handler (swallows errors)',
-                'suggestion': 'Log the exception or handle it properly'
-            },
-            {
-                'pattern': r'eval\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'eval() usage detected (security risk)',
-                'suggestion': 'Avoid eval(), use safer alternatives like ast.literal_eval()'
-            },
-            {
-                'pattern': r'import\s+\w+\s+as\s+\w+',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'Potentially unused import',
-                'suggestion': 'Remove unused imports or use them'
-            },
-            {
-                'pattern': r'def\s+\w+\s*\(\s*\)\s*:\s*pass',
-                'severity': Severity.MEDIUM,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'Empty function definition found',
-                'suggestion': 'Implement the function or remove it'
-            },
-            {
-                'pattern': r'print\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'print() found in code',
-                'suggestion': 'Use logging module instead of print for production'
-            },
-            {
-                'pattern': r'for\s+.*?:\s*.*?for\s+',
-                'severity': Severity.MEDIUM,
-                'type': IssueType.PERFORMANCE,
-                'message': 'Nested loops detected (O(n²))',
-                'suggestion': 'Consider using list comprehensions or optimizing algorithm'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
+        # Missing semicolon (JavaScript, C++, Java, C#)
+        if language in ["javascript", "cpp", "java", "csharp"]:
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped or stripped.startswith(('//', '/*', '#')):
+                    continue
+                if stripped.endswith(('{', '}', ';')):
+                    continue
+                if stripped.startswith(('function', 'if', 'for', 'while', 'switch', 'try', 'return', 'let', 'const', 'var', 'int', 'void', 'char', 'float', 'double', 'class', 'struct')):
+                    continue
                 issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
+                    message=f"⚠️ Missing semicolon ';' in line {i+1}",
+                    severity=Severity.MEDIUM,
+                    suggestion="Add ';' at the end of the statement",
+                    type=IssueType.CODE_QUALITY,
+                    line=i+1,
+                    fixed_code=line + ';'  # ফিক্স কোড
                 ))
+                break
         
-        return issues
-    
-    def _analyze_javascript(self, code: str) -> List[CodeIssue]:
-        """Analyze JavaScript/TypeScript code"""
-        issues = []
+        # Missing closing parenthesis
+        for i, line in enumerate(lines):
+            if '(' in line and ')' not in line:
+                if not line.strip().startswith('#'):
+                    issues.append(CodeIssue(
+                        message=f"❌ Missing closing parenthesis ')' in line {i+1}",
+                        severity=Severity.CRITICAL,
+                        suggestion="Add ')' after the parameters",
+                        type=IssueType.BUG,
+                        line=i+1,
+                        fixed_code=line + ')'  # ফিক্স কোड
+                    ))
+                    break
         
-        patterns = [
-            {
-                'pattern': r'useEffect\s*\(\s*\([^)]*\)\s*=>\s*{[^}]*}\s*\)(?!\s*,\s*\[)',
-                'severity': Severity.HIGH,
-                'type': IssueType.BUG,
-                'message': 'useEffect missing dependency array',
-                'suggestion': 'Add proper dependency array to prevent infinite loops'
-            },
-            {
-                'pattern': r'console\.(log|warn|error)\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'console statement found in production code',
-                'suggestion': 'Remove console statements or use proper logging'
-            },
-            {
-                'pattern': r'(api_key|apikey|secret)\s*[:=]\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded API key detected',
-                'suggestion': 'Use environment variables for API keys'
-            },
-            {
-                'pattern': r'var\s+\w+',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'Using var instead of let/const',
-                'suggestion': 'Use let/const for better scoping'
-            },
-            {
-                'pattern': r'==\s*(?!==)',
-                'severity': Severity.MEDIUM,
-                'type': IssueType.BEST_PRACTICE,
-                'message': 'Using loose equality (==) instead of strict equality (===)',
-                'suggestion': 'Use === for strict type checking'
-            },
-            {
-                'pattern': r'eval\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'eval() usage detected (security risk)',
-                'suggestion': 'Avoid eval(), use JSON.parse() or Function constructor'
-            },
-            {
-                'pattern': r'document\.write\s*\(',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'document.write() usage (XSS risk)',
-                'suggestion': 'Use DOM manipulation methods like createElement or innerHTML safely'
-            }
-        ]
+        # ============================================================
+        # 2. SECURITY VULNERABILITIES
+        # ============================================================
         
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_java(self, code: str) -> List[CodeIssue]:
-        """Analyze Java code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'Statement\s+.*?execute',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection using Statement',
-                'suggestion': 'Use PreparedStatement with parameterized queries'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables or configuration files'
-            },
-            {
-                'pattern': r'catch\s*\(\s*\w+\s+\w+\s*\)\s*\{\s*\}',
-                'severity': Severity.HIGH,
-                'type': IssueType.BUG,
-                'message': 'Empty catch block',
-                'suggestion': 'Log the exception or handle it properly'
-            },
-            {
-                'pattern': r'System\.out\.println\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'System.out.println() found in code',
-                'suggestion': 'Use logging framework (Log4j, SLF4J) instead'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_cpp(self, code: str) -> List[CodeIssue]:
-        """Analyze C++ code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'strcpy\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'strcpy usage (buffer overflow risk)',
-                'suggestion': 'Use strcpy_s or std::string'
-            },
-            {
-                'pattern': r'printf\s*\(',
-                'severity': Severity.MEDIUM,
-                'type': IssueType.SECURITY,
-                'message': 'printf usage (format string vulnerability)',
-                'suggestion': 'Use cout or safer alternatives'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables'
-            },
-            {
-                'pattern': r'delete\s+',
-                'severity': Severity.MEDIUM,
-                'type': IssueType.PERFORMANCE,
-                'message': 'Manual memory management (risk of memory leaks)',
-                'suggestion': 'Use smart pointers (unique_ptr, shared_ptr)'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_csharp(self, code: str) -> List[CodeIssue]:
-        """Analyze C# code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'SqlCommand\s+.*?\.Execute',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection risk',
-                'suggestion': 'Use parameterized queries with SqlParameter'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables or configuration'
-            },
-            {
-                'pattern': r'Console\.WriteLine\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'Console.WriteLine() found in code',
-                'suggestion': 'Use logging framework (NLog, Serilog)'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_ruby(self, code: str) -> List[CodeIssue]:
-        """Analyze Ruby code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'execute\s*\(.*?\)',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection risk',
-                'suggestion': 'Use parameterized queries with ActiveRecord'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables'
-            },
-            {
-                'pattern': r'eval\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'eval() usage detected',
-                'suggestion': 'Avoid eval() in Ruby'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_go(self, code: str) -> List[CodeIssue]:
-        """Analyze Go code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'sql\.Query\s*\([^,]*\+',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection risk',
-                'suggestion': 'Use parameterized queries with $1, $2 placeholders'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables with os.Getenv()'
-            },
-            {
-                'pattern': r'fmt\.Println\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'fmt.Println() found in code',
-                'suggestion': 'Use log package for logging'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_rust(self, code: str) -> List[CodeIssue]:
-        """Analyze Rust code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'unwrap\s*\(\s*\)',
-                'severity': Severity.HIGH,
-                'type': IssueType.BUG,
-                'message': 'unwrap() usage (may panic)',
-                'suggestion': 'Use proper error handling with Result or Option'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables with std::env'
-            },
-            {
-                'pattern': r'println!\s*\(',
-                'severity': Severity.LOW,
-                'type': IssueType.CODE_QUALITY,
-                'message': 'println!() found in code',
-                'suggestion': 'Use log crate for logging'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_php(self, code: str) -> List[CodeIssue]:
-        """Analyze PHP code"""
-        issues = []
-        
-        patterns = [
-            {
-                'pattern': r'mysql_query\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'SQL Injection risk (deprecated mysql_query)',
-                'suggestion': 'Use PDO or MySQLi with prepared statements'
-            },
-            {
-                'pattern': r'echo\s+.*?\$_',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'XSS vulnerability (direct output of user input)',
-                'suggestion': 'Use htmlspecialchars() or use templating engine'
-            },
-            {
-                'pattern': r'(password|secret)\s*=\s*[\'"][^\'"]+[\'"]',
-                'severity': Severity.HIGH,
-                'type': IssueType.SECURITY,
-                'message': 'Hardcoded credential detected',
-                'suggestion': 'Use environment variables with getenv()'
-            },
-            {
-                'pattern': r'eval\s*\(',
-                'severity': Severity.CRITICAL,
-                'type': IssueType.SECURITY,
-                'message': 'eval() usage detected (security risk)',
-                'suggestion': 'Avoid eval() in PHP'
-            }
-        ]
-        
-        for pattern in patterns:
-            if re.search(pattern['pattern'], code, re.DOTALL):
-                issues.append(CodeIssue(
-                    message=pattern['message'],
-                    severity=pattern['severity'],
-                    type=pattern['type'],
-                    suggestion=pattern['suggestion'],
-                    line=1
-                ))
-        
-        return issues
-    
-    def _analyze_generic(self, code: str) -> List[CodeIssue]:
-        """Generic analysis for unsupported languages"""
-        issues = []
-        
-        # Check file size
-        lines = code.splitlines()
-        if len(lines) > 500:
+        # SQL Injection
+        if re.search(r'execute\s*\(\s*f[\'"]', code) or re.search(r'Statement\s+.*?execute', code):
             issues.append(CodeIssue(
-                message="Large file detected (>500 lines)",
-                severity=Severity.LOW,
-                type=IssueType.MAINTAINABILITY,
-                suggestion="Consider splitting into smaller modules for better maintainability"
+                message="🔴 CRITICAL: SQL Injection vulnerability detected",
+                severity=Severity.CRITICAL,
+                suggestion="Use parameterized queries with placeholders",
+                type=IssueType.SECURITY,
+                line=1,
+                fixed_code='cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))'  # ফিক্স কোড
             ))
         
-        # Check for TODOs
+        # Hardcoded credentials
+        if re.search(r'(password|passwd|secret|api_key|token)\s*=\s*[\'"][^\'"]+[\'"]', code, re.IGNORECASE):
+            issues.append(CodeIssue(
+                message="🔑 SECURITY: Hardcoded credential detected",
+                severity=Severity.HIGH,
+                suggestion="Use environment variables",
+                type=IssueType.SECURITY,
+                line=1,
+                fixed_code='PASSWORD = os.getenv("PASSWORD")'  # ফিক্স কোড
+            ))
+        
+        # eval()
+        if 'eval(' in code:
+            issues.append(CodeIssue(
+                message="🚫 CRITICAL: eval() usage detected (RCE risk)",
+                severity=Severity.CRITICAL,
+                suggestion="Use ast.literal_eval() or json.loads()",
+                type=IssueType.SECURITY,
+                line=1,
+                fixed_code='ast.literal_eval(data)'  # ফিক্স কোড
+            ))
+        
+        # ============================================================
+        # 3. LOGIC ERRORS
+        # ============================================================
+        
+        # Division by zero
+        if re.search(r'/[\s]*0', code):
+            issues.append(CodeIssue(
+                message="⚠️ Division by zero detected",
+                severity=Severity.HIGH,
+                suggestion="Check for zero before division",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='if denominator != 0:\n    result = numerator / denominator'  # ফিক্স কোড
+            ))
+        
+        # Off-by-one
+        if 'range(' in code and '+ 1)' in code:
+            issues.append(CodeIssue(
+                message="⚠️ Off-by-one error in range()",
+                severity=Severity.CRITICAL,
+                suggestion="Use range(len(list)) without +1",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='for i in range(len(numbers)):'  # ফিক্স কোড
+            ))
+        
+        # ============================================================
+        # 4. CODE QUALITY
+        # ============================================================
+        
+        # print()
+        if 'print(' in code and language == "python":
+            issues.append(CodeIssue(
+                message="📝 print() in production code",
+                severity=Severity.LOW,
+                suggestion="Use logging module instead of print()",
+                type=IssueType.CODE_QUALITY,
+                line=1,
+                fixed_code='logger.info("message")'  # ফিক্স কোড
+            ))
+        
+        # console.log
+        if 'console.log' in code and language in ["javascript", "typescript"]:
+            issues.append(CodeIssue(
+                message="📝 console.log in production code",
+                severity=Severity.LOW,
+                suggestion="Remove console.log or use proper logging",
+                type=IssueType.CODE_QUALITY,
+                line=1,
+                fixed_code='// console.log removed'  # ফিক্স কোড
+            ))
+        
+        # var usage
+        if language in ["javascript", "typescript"] and 'var ' in code:
+            issues.append(CodeIssue(
+                message="📌 Using 'var' instead of 'let' or 'const'",
+                severity=Severity.LOW,
+                suggestion="Use 'let' for mutable, 'const' for immutable",
+                type=IssueType.CODE_QUALITY,
+                line=1,
+                fixed_code=code.replace('var ', 'let ')  # ফিক্স কোড
+            ))
+        
+        # ============================================================
+        # 5. LANGUAGE SPECIFIC
+        # ============================================================
+        
+        # strcpy (C++)
+        if language == "cpp" and 'strcpy(' in code:
+            issues.append(CodeIssue(
+                message="🔴 CRITICAL: strcpy usage (buffer overflow risk)",
+                severity=Severity.CRITICAL,
+                suggestion="Use strcpy_s or std::string",
+                type=IssueType.SECURITY,
+                line=1,
+                fixed_code='strcpy_s(dest, sizeof(dest), src);'  # ফিক্স কোড
+            ))
+        
+        # using namespace std (C++)
+        if language == "cpp" and 'using namespace std;' in code:
+            issues.append(CodeIssue(
+                message="📌 'using namespace std;' is bad practice",
+                severity=Severity.LOW,
+                suggestion="Use std:: prefix instead",
+                type=IssueType.CODE_QUALITY,
+                line=1,
+                fixed_code='std::cout << "Hello" << std::endl;'  # ফিক্স কোড
+            ))
+        
+        # Missing end (Ruby)
+        if language == "ruby" and 'def ' in code and 'end' not in code:
+            issues.append(CodeIssue(
+                message="❌ Missing 'end' for method definition",
+                severity=Severity.CRITICAL,
+                suggestion="Add 'end' at the end of the method",
+                type=IssueType.BUG,
+                line=len(lines),
+                fixed_code=code + '\nend'  # ফিক্স কোড
+            ))
+        
+        # unwrap() (Rust)
+        if language == "rust" and 'unwrap()' in code:
+            issues.append(CodeIssue(
+                message="⚠️ unwrap() usage (may panic)",
+                severity=Severity.HIGH,
+                suggestion="Use proper error handling with Result or Option",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='match result {\n    Ok(value) => value,\n    Err(e) => panic!("Error: {}", e),\n}'  # ফিক্স কোড
+            ))
+        
+        # Force unwrapping (Swift)
+        if language == "swift" and '!' in code:
+            issues.append(CodeIssue(
+                message="⚠️ Force unwrapping (!) may crash",
+                severity=Severity.MEDIUM,
+                suggestion="Use optional binding (if let) or guard",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='if let value = optionalValue {\n    print(value)\n} else {\n    print("Value is nil")\n}'  # ফিক্স কোড
+            ))
+        
+        # !! operator (Kotlin)
+        if language == "kotlin" and '!!' in code:
+            issues.append(CodeIssue(
+                message="⚠️ !! operator (may cause NullPointerException)",
+                severity=Severity.MEDIUM,
+                suggestion="Use safe call (?.) or Elvis operator (?:)",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='val length = str?.length ?: 0'  # ফিক্স কোড
+            ))
+        
+        # ============================================================
+        # 6. GENERIC
+        # ============================================================
+        
+        # TODO/FIXME
         if "TODO" in code or "FIXME" in code:
             issues.append(CodeIssue(
-                message="TODO/FIXME comments found",
+                message="📌 TODO/FIXME comments found",
                 severity=Severity.LOW,
+                suggestion="Address or remove TODO/FIXME comments",
                 type=IssueType.CODE_QUALITY,
-                suggestion="Address or remove TODO/FIXME comments"
+                line=1,
+                fixed_code='# Addressed TODO'  # ফিক্স কোড
             ))
         
-        # Check for hardcoded values
-        if re.search(r'(password|secret|key|token)\s*=\s*[\'"][^\'"]+[\'"]', code, re.IGNORECASE):
+        # Empty catch block
+        if re.search(r'catch\s*\([^)]*\)\s*\{\s*\}', code):
             issues.append(CodeIssue(
-                message="Potential hardcoded credential detected",
+                message="⚠️ Empty catch block",
                 severity=Severity.HIGH,
-                type=IssueType.SECURITY,
-                suggestion="Use environment variables for sensitive data"
+                suggestion="Log the exception or handle it properly",
+                type=IssueType.BUG,
+                line=1,
+                fixed_code='catch (Exception e) {\n    logger.error("Error: " + e.getMessage());\n    throw e;\n}'  # ফিক্স কোড
             ))
         
-        return issues
-    
-    def get_supported_languages(self) -> List[str]:
-        """Get list of supported languages"""
-        return list(self.LANGUAGES.keys())
-    
-    def get_language_info(self, language: str) -> Optional[Dict]:
-        """Get information about a language"""
-        return self.LANGUAGES.get(language)
-    
-    def detect_language(self, code: str) -> str:
-        """Detect programming language from code"""
-        code_lower = code.lower()
+        # ============================================================
+        # SCORE CALCULATION
+        # ============================================================
         
-        if 'def ' in code and 'import ' in code and ':' in code:
-            return 'python'
-        elif 'function' in code or '=>' in code or 'const ' in code:
-            return 'javascript'
-        elif 'interface' in code and 'type ' in code:
-            return 'typescript'
-        elif 'public class' in code and 'void ' in code:
-            return 'java'
-        elif 'using System' in code:
-            return 'csharp'
-        elif '#include' in code and 'std::' in code:
-            return 'cpp'
-        elif 'def ' in code and 'end' in code:
-            return 'ruby'
-        elif 'package main' in code and 'func main' in code:
-            return 'go'
-        elif 'fn main' in code and 'println!' in code:
-            return 'rust'
-        elif '<?php' in code:
-            return 'php'
-        elif 'import Swift' in code:
-            return 'swift'
-        elif 'fun ' in code and 'class ' in code:
-            return 'kotlin'
-        else:
-            return 'unknown'
+        score = self._calculate_score(issues)
+        return issues, score
+    
+    def _calculate_score(self, issues: List[CodeIssue]) -> int:
+        if not issues:
+            return 100
+        
+        weights = {
+            Severity.CRITICAL: 20,
+            Severity.HIGH: 15,
+            Severity.MEDIUM: 10,
+            Severity.LOW: 5
+        }
+        
+        deduction = sum(weights.get(i.severity, 5) for i in issues)
+        return max(0, 100 - deduction)

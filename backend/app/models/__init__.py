@@ -1,6 +1,6 @@
 from .code import CodeIssue, Severity, IssueType
-from .analysis import AnalysisRequest, AnalysisResponse
-from .user import User, UserRole
+from .analysis import AnalysisRequest, AnalysisResponse, FixRequest, FixResponse, BatchAnalysisRequest, BatchAnalysisResponse
+from .user import User, UserRole, UserCreate, UserLogin, UserResponse, UserPreferences
 
 __all__ = [
     'CodeIssue',
@@ -8,6 +8,14 @@ __all__ = [
     'IssueType',
     'AnalysisRequest',
     'AnalysisResponse',
+    'FixRequest',
+    'FixResponse',
+    'BatchAnalysisRequest',
+    'BatchAnalysisResponse',
     'User',
-    'UserRole'
+    'UserRole',
+    'UserCreate',
+    'UserLogin',
+    'UserResponse',
+    'UserPreferences'
 ]

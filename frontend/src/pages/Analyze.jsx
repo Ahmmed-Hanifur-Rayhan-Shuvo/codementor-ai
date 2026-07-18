@@ -1,3 +1,5 @@
+// frontend/src/pages/Analyze.jsx
+
 import { useState } from 'react';
 import CodeAnalyzer from '../components/analysis/CodeAnalyzer';
 import ReportCard from '../components/analysis/ReportCard';
@@ -6,10 +8,11 @@ import { motion } from 'framer-motion';
 import { Code2, AlertCircle, CheckCircle, Wand2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const Analyze = ({ darkMode }) => {
+const Analyze = ({ darkMode = true }) => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [currentCode, setCurrentCode] = useState('');
 
+  // ফিক্স কোড অ্যাপ্লাই করার ফাংশন
   const handleApplyFix = (fixedCode) => {
     setCurrentCode(fixedCode);
     toast.success('✅ Fix applied to editor!');
@@ -47,13 +50,9 @@ const Analyze = ({ darkMode }) => {
               {/* Quality Score */}
               <QualityScore score={analysisResult.quality_score} darkMode={darkMode} />
 
-              {/* Stats */}
+              {/* Issue Breakdown */}
               {stats && stats.total > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}
-                >
+                <div className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Issue Breakdown</h4>
                     {stats.hasFixes && (
@@ -89,30 +88,22 @@ const Analyze = ({ darkMode }) => {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* Summary */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}
-              >
+              <div className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}>
                 <h3 className={`text-lg font-semibold mb-2 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                   <Sparkles className="w-5 h-5 text-yellow-400" />
                   Summary
                 </h3>
-                <p className={darkMode ? 'text-gray-300 leading-relaxed' : 'text-gray-600 leading-relaxed'}>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
                   {analysisResult.summary}
                 </p>
-              </motion.div>
+              </div>
 
-              {/* Issues */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}
-              >
+              {/* Issues List */}
+              <div className={`rounded-2xl p-6 ${darkMode ? 'glass' : 'bg-white border border-gray-200'}`}>
                 <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                   <AlertCircle className="w-5 h-5 text-red-400" />
                   Issues ({analysisResult.issues?.length || 0})
@@ -130,7 +121,7 @@ const Analyze = ({ darkMode }) => {
                       key={index} 
                       issue={issue}
                       onApplyFix={handleApplyFix}
-                      darkMode={darkMode}
+                      isDark={darkMode}
                     />
                   ))}
                   
@@ -144,15 +135,11 @@ const Analyze = ({ darkMode }) => {
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Fixed Code */}
+              {/* Complete Fixed Code */}
               {analysisResult.fixed_code && analysisResult.issues?.length > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`rounded-2xl p-6 border ${darkMode ? 'glass border-green-500/20' : 'bg-white border-green-200'}`}
-                >
+                <div className={`rounded-2xl p-6 border ${darkMode ? 'glass border-green-500/20' : 'bg-white border-green-200'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className={`text-lg font-semibold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                       <Wand2 className="w-5 h-5 text-green-400" />
@@ -168,7 +155,7 @@ const Analyze = ({ darkMode }) => {
                       📋 Copy
                     </button>
                   </div>
-                  <div className={`rounded-lg p-4 overflow-x-auto max-h-60 ${darkMode ? 'bg-dark-900' : 'bg-gray-900'}`}>
+                  <div className={`rounded-lg p-4 overflow-x-auto max-h-60 ${darkMode ? 'bg-gray-900' : 'bg-gray-900'}`}>
                     <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
                       {analysisResult.fixed_code}
                     </pre>
@@ -178,12 +165,12 @@ const Analyze = ({ darkMode }) => {
                       setCurrentCode(analysisResult.fixed_code);
                       toast.success('✅ Fixed code applied to editor!');
                     }}
-                    className="mt-3 w-full text-sm bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                    className="mt-3 w-full text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                   >
                     <Wand2 className="w-4 h-4" />
                     Apply All Fixes
                   </button>
-                </motion.div>
+                </div>
               )}
             </>
           ) : (
@@ -200,12 +187,6 @@ const Analyze = ({ darkMode }) => {
               <p className={darkMode ? 'text-gray-400 max-w-sm' : 'text-gray-500 max-w-sm'}>
                 Paste your code and get AI-powered insights with <strong className="text-primary">auto-fix</strong> solutions.
               </p>
-              <div className="mt-6 flex gap-2 text-xs flex-wrap justify-center">
-                <span className={`px-3 py-1 rounded-full ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>🔒 Security</span>
-                <span className={`px-3 py-1 rounded-full ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>⚡ Performance</span>
-                <span className={`px-3 py-1 rounded-full ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>📐 Best Practices</span>
-                <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400">🔧 Auto-Fix</span>
-              </div>
             </div>
           )}
         </div>
