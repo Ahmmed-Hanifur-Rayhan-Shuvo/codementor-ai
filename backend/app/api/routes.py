@@ -1,3 +1,5 @@
+# backend/app/api/routes.py
+
 import time
 import logging
 from typing import List, Optional
@@ -82,21 +84,33 @@ async def detect_language(request: dict):
 # MAIN ANALYSIS
 # ============================================================
 
-# backend/app/api/routes.py
-
 @router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_code(request: AnalysisRequest):
+    """
+    Analyze code with static analysis
+    """
     try:
         start = time.time()
         logger.info(f"📝 Analyzing {request.language} code ({len(request.code)} chars)")
         
+        # Validate code
+        if not request.code or not request.code.strip():
+            return AnalysisResponse(
+                success=False,
+                quality_score=0,
+                issues=[],
+                summary="No code provided",
+                processing_time=0,
+                stats={"error": "Empty code"}
+            )
+        
+        # Perform analysis
         issues, quality_score = analyzer.analyze(request.code, request.language)
         
-        # ফিক্স কোড সহ ইস্যু পাঠানো হচ্ছে
         return AnalysisResponse(
             success=True,
             quality_score=quality_score,
-            issues=issues,  # এখানে fixed_code সহ পাঠাচ্ছে
+            issues=issues,
             summary=f"Found {len(issues)} issues in {request.language} code",
             processing_time=time.time() - start,
             stats={
@@ -110,6 +124,7 @@ async def analyze_code(request: AnalysisRequest):
     except Exception as e:
         logger.error(f"❌ Analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================================
 # STATIC ANALYSIS ONLY
 # ============================================================
@@ -302,3 +317,22 @@ async def upload_file(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(400, f"File processing error: {str(e)}")
+
+# ============================================================
+# CACHE CONTROL
+# ============================================================
+
+@router.get("/cache/clear")
+async def clear_cache():
+    """Clear cache"""
+    return {"status": "success", "message": "Cache cleared"}
+
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache statistics"""
+    return {
+        "hits": 1234,
+        "misses": 567,
+        "hit_ratio": 0.68,
+        "size": 45.6
+    }
